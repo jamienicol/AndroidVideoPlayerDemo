@@ -1,110 +1,37 @@
-/*
- * Copyright (C) 2013 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package uk.jamiern.videoplayerdemo;
 
-package com.example.android.basicmediadecoder;
-
-
+import android.content.Context;
 import android.animation.TimeAnimator;
-import android.app.Activity;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.net.Uri;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+import android.util.Log;
 import android.view.Surface;
-import android.view.TextureView;
-import android.view.View;
-import android.widget.TextView;
 
 import com.example.android.common.media.MediaCodecWrapper;
 
 import java.io.IOException;
 
-/**
- * This activity uses a {@link android.view.TextureView} to render the frames of a video decoded using
- * {@link android.media.MediaCodec} API.
- */
-public class MainActivity extends Activity {
-
-    private TextureView mPlaybackView;
-    private TimeAnimator mTimeAnimator = new TimeAnimator();
-
-    // A utility that wraps up the underlying input and output buffer processing operations
-    // into an east to use API.
+public class DecoderThread extends Thread {
+    private static final String LOGTAG = "DecoderThread";
     private MediaCodecWrapper mCodecWrapper;
     private MediaExtractor mExtractor = new MediaExtractor();
-    TextView mAttribView = null;
+    private TimeAnimator mTimeAnimator = new TimeAnimator();
 
 
-    /**
-     * Called when the activity is first created.
-     */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.sample_main);
-        mPlaybackView = (TextureView) findViewById(R.id.PlaybackView);
-        mAttribView =  (TextView)findViewById(R.id.AttribView);
-
+    public DecoderThread() {
+        super("Decoder");
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.action_menu, menu);
-        return true;
+    @Override public void run() {
+        Log.d(LOGTAG, "Running DecoderThread");
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if(mTimeAnimator != null && mTimeAnimator.isRunning()) {
-            mTimeAnimator.end();
-        }
-
-        if (mCodecWrapper != null ) {
-            mCodecWrapper.stopAndRelease();
-            mExtractor.release();
-        }
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.menu_play) {
-            mAttribView.setVisibility(View.VISIBLE);
-            startPlayback();
-            item.setEnabled(false);
-        }
-        return true;
-    }
-
-
-    public void startPlayback() {
-
-        // Construct a URI that points to the video resource that we want to play
-        Uri videoUri = Uri.parse("android.resource://"
-                + getPackageName() + "/"
-                + R.raw.vid_bigbuckbunny);
-
+    public synchronized void startDecoding(Context context, Uri videoUri, Surface surface) {
         try {
 
             // BEGIN_INCLUDE(initialize_extractor)
-            mExtractor.setDataSource(this, videoUri, null);
+            mExtractor.setDataSource(context, videoUri, null);
             int nTracks = mExtractor.getTrackCount();
 
             // Begin by unselecting all of the tracks in the extractor, so we won't see
@@ -122,7 +49,7 @@ public class MainActivity extends Activity {
                 // track is not a video track, or not a recognized video format. Once it returns
                 // a valid MediaCodecWrapper, we can break out of the loop.
                 mCodecWrapper = MediaCodecWrapper.fromVideoFormat(mExtractor.getTrackFormat(i),
-                        new Surface(mPlaybackView.getSurfaceTexture()));
+                        surface);
                 if (mCodecWrapper != null) {
                     mExtractor.selectTrack(i);
                     break;
@@ -185,5 +112,9 @@ public class MainActivity extends Activity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public synchronized void pauseDecoding() {
+
     }
 }

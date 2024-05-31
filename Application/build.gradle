@@ -18,18 +18,10 @@ repositories {
 }
 
 dependencies {
-
-
         implementation "com.android.support:support-v4:28.0.0"
         implementation "com.android.support:support-v13:28.0.0"
         implementation "com.android.support:cardview-v7:28.0.0"
         implementation "com.android.support:appcompat-v7:28.0.0"
-
-
-
-
-
-
 }
 
 // The sample build uses multiple directories to
@@ -46,6 +38,11 @@ android {
     defaultConfig {
         minSdkVersion 17
         targetSdkVersion 28
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
     }
 
     compileOptions {
@@ -56,7 +53,7 @@ android {
     sourceSets {
         main {
             dirs.each { dir ->
-                java.srcDirs "src/${dir}/java"
+                java.srcDirs "src/${dir}/java", "src/${dir}/swig"
                 res.srcDirs "src/${dir}/res"
             }
         }
@@ -64,6 +61,16 @@ android {
         androidTest.java.srcDirs = ['tests/src']
 
     }
-    namespace 'com.example.android.basicmediadecoder'
+    namespace 'uk.jamiern.videoplayerdemo'
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
 
+    project.afterEvaluate {
+        javaPreCompileDebug.dependsOn externalNativeBuildDebug
+        javaPreCompileRelease.dependsOn externalNativeBuildDebug
+    }
 }
